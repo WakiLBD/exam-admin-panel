@@ -52,35 +52,50 @@ def apply_custom_design():
         }
         
         /* -----------------------
-           4. INPUT FIELDS (CLEAN)
+           4. INPUT FIELDS (FIXED HEIGHT & PADDING)
            ----------------------- */
+        /* General Input Styling */
         .stTextInput > div > div > input, 
         .stNumberInput > div > div > input, 
-        .stSelectbox > div > div > div, 
         .stTextArea > div > div > textarea {
             background-color: #FFFFFF; 
             color: #1E293B; 
             border-radius: 12px; 
-            border: 2px solid #E2E8F0; /* Light Grey Border */
-            padding: 12px 16px;
+            border: 2px solid #E2E8F0; 
+            padding: 10px 15px; /* Adjusted padding */
             font-weight: 500;
+            min-height: 45px; /* Fixed height for consistency */
             transition: all 0.2s ease;
+        }
+
+        /* -----------------------
+           🔥 SPECIFIC FIX FOR SELECTBOX (CATEGORY) 🔥
+           ----------------------- */
+        /* Targeting the container of the selectbox to fix text cutting */
+        .stSelectbox div[data-baseweb="select"] > div {
+            background-color: #FFFFFF !important;
+            border: 2px solid #E2E8F0 !important;
+            border-radius: 12px !important;
+            color: #1E293B !important;
+            min-height: 45px !important; /* Matches other inputs */
+            display: flex !important;
+            align-items: center !important; /* Vertically center text */
         }
 
         /* Focus Effect (Teal/Purple) */
         .stTextInput > div > div > input:focus,
         .stNumberInput > div > div > input:focus,
-        .stTextArea > div > div > textarea:focus {
-            border-color: #8B5CF6; 
-            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1); 
+        .stTextArea > div > div > textarea:focus,
+        .stSelectbox div[data-baseweb="select"] > div:focus-within {
+            border-color: #8B5CF6 !important; 
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1) !important; 
         }
 
         /* -----------------------
            5. BUTTONS (VIBRANT GRADIENTS)
            ----------------------- */
-        /* Primary Button Style */
         .stButton > button {
-            background: linear-gradient(135deg, #0EA5E9 0%, #3B82F6 100%); /* Blue Gradient */
+            background: linear-gradient(135deg, #0EA5E9 0%, #3B82F6 100%);
             color: white;
             border: none;
             padding: 14px 32px;
@@ -120,8 +135,8 @@ def apply_custom_design():
         }
 
         .stTabs [aria-selected="true"] {
-            background-color: #EFF6FF; /* Light Blue */
-            color: #3B82F6; /* Active Blue */
+            background-color: #EFF6FF;
+            color: #3B82F6;
         }
         
         /* Custom Info Box */
