@@ -464,7 +464,7 @@ def main():
                     ps_dur = col_e.number_input("⏳ Duration (Months)", value=2.5, step=0.5)
 
                     col_f, col_g = st.columns(2)
-                    ps_grade = col_f.selectbox("🎓 Grade", ["HSC 27", "HSC 26", "Admission 26", "Admission 25"])
+                    ps_grade = col_f.selectbox("🎓 Grade", ["HSC-27 Academic", "HSC-26 Academic", "HSC-26 Admission", "HSC-25 Admission"])
                     ps_type = col_g.selectbox("🏷️ Course Type", ['ACS', 'UDVASH', 'Physics Hunters', 'Bondi Pathshala', 'RTDS', 'Battle of Biology', 'Alchemy', 'CPS'])
 
                     col_h, col_i = st.columns(2)
@@ -509,3 +509,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
