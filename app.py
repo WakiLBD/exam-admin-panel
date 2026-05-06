@@ -40,115 +40,136 @@ PATH_2_COURSE = 'courses/courses.json'
 IMG_CDN_BASE = "https://cdn.jsdelivr.net/gh/PremiumSubscriptions/premium-subscriptions-bot@main/"
 
 # ==========================================
-# 🎨 UI & UX DESIGN SYSTEM (PREMIUM)
+# 🎨 UI & UX DESIGN SYSTEM (PREMIUM & ROBUST)
 # ==========================================
 def apply_custom_design():
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-        /* GLOBAL THEME */
-        .stApp {
-            background-color: #F8F9FC;
-            color: #0F172A;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+        /* 1. FORCE LIGHT MODE & FONT SMOOTHING (Mac/Windows sync) */
+        :root {
+            color-scheme: light only !important;
+        }
+        
+        .stApp, html, body {
+            background-color: #F8F9FC !important;
+            color: #0F172A !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            
+            /* iPhone Notch & Bottom Bar Fixes */
+            min-height: 100dvh !important; 
+            min-height: -webkit-fill-available !important; 
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
         }
         
         /* HEADERS */
         h1, h2, h3 {
             font-weight: 800 !important;
-            letter-spacing: -0.5px;
-            color: #1E293B;
+            letter-spacing: -0.5px !important;
+            color: #1E293B !important;
         }
         
+        /* 2. GRADIENT TEXT WITH VENDOR PREFIXES (Older Safari/Android support) */
         .gradient-text {
-            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-size: 2.2rem;
-            font-weight: 800;
+            color: #6366F1 !important; /* Fallback */
+            background: -webkit-linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%) !important;
+            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            font-size: 2.2rem !important;
+            font-weight: 800 !important;
         }
 
-        /* CARDS */
+        /* 3. CARDS NORMALIZATION */
         div[data-testid="stForm"], div.css-card {
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.06);
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            border-radius: 20px !important;
+            padding: 30px !important;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.06) !important;
         }
         
-        /* INPUTS */
+        /* 4. INPUTS NORMALIZATION (Removes iOS default shadow and styles) */
         .stTextInput > div > div > input, 
         .stNumberInput > div > div > input,
         .stSelectbox > div > div > div,
         .stTextArea > div > div > textarea {
-            background-color: #FFFFFF;
-            border: 2px solid #E2E8F0;
-            border-radius: 12px;
-            color: #334155;
-            font-weight: 500;
-            min-height: 48px;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            background-color: #FFFFFF !important;
+            border: 2px solid #E2E8F0 !important;
+            border-radius: 12px !important;
+            color: #334155 !important;
+            font-weight: 500 !important;
+            min-height: 48px !important;
+            box-shadow: none !important;
         }
         
         .stTextInput > div > div > input:focus, 
         .stNumberInput > div > div > input:focus {
-            border-color: #6366F1;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            border-color: #6366F1 !important;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important;
+            outline: none !important;
         }
 
-        /* BUTTONS */
+        /* 5. BUTTONS NORMALIZATION (Cross-browser identical look) */
         .stButton > button {
-            background: linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%);
-            color: white;
-            border: none;
-            padding: 12px 28px;
-            border-radius: 12px;
-            font-weight: 700;
-            transition: all 0.3s ease;
-            width: 100%;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            background: -webkit-linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%) !important;
+            background: linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%) !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            padding: 12px 28px !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            transition: all 0.3s ease !important;
+            width: 100% !important;
+            -webkit-tap-highlight-color: transparent !important; /* Removes blue tap flash on Android */
         }
         .stButton > button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4) !important;
         }
 
-        /* TABS */
+        /* 6. TABS & STATUS PILLS (Locking colors against inversion) */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            background-color: #FFFFFF;
-            padding: 10px;
-            border-radius: 16px;
-            box-shadow: 0 4px 10px -2px rgba(0,0,0,0.05);
+            gap: 8px !important;
+            background-color: #FFFFFF !important;
+            padding: 10px !important;
+            border-radius: 16px !important;
+            box-shadow: 0 4px 10px -2px rgba(0,0,0,0.05) !important;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #EEF2FF;
-            color: #4F46E5;
-            border-radius: 10px;
+            background-color: #EEF2FF !important;
+            color: #4F46E5 !important;
+            border-radius: 10px !important;
         }
         
-        /* STATUS PILLS & INFO BOX */
         .id-badge {
-            background-color: #ECFDF5;
-            color: #059669;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            border: 1px solid #D1FAE5;
+            background-color: #ECFDF5 !important;
+            color: #059669 !important;
+            padding: 4px 12px !important;
+            border-radius: 20px !important;
+            font-size: 0.85rem !important;
+            font-weight: 700 !important;
+            border: 1px solid #D1FAE5 !important;
         }
 
         .info-box {
-            background-color: #F0FDFA;
-            border: 1px solid #CCFBF1;
-            padding: 15px;
-            border-radius: 12px;
-            color: #0F766E;
-            font-weight: 600;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            background-color: #F0FDFA !important;
+            border: 1px solid #CCFBF1 !important;
+            padding: 15px !important;
+            border-radius: 12px !important;
+            color: #0F766E !important;
+            font-weight: 600 !important;
+            margin-bottom: 15px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -509,4 +530,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
