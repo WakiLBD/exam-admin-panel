@@ -36,6 +36,11 @@ REPO_2_OWNER = 'PremiumSubscriptions'
 REPO_2_NAME = 'ps'
 PATH_2_COURSE = 'courses/courses.json'
 
+# 3. Bot Database Config
+REPO_3_OWNER = 'PremiumSubscriptions'
+REPO_3_NAME = 'CourseDataDB'
+
+
 # CDN Config
 IMG_CDN_BASE = "https://cdn.jsdelivr.net/gh/PremiumSubscriptions/premium-subscriptions-bot@main/"
 
@@ -283,7 +288,8 @@ def main():
     st.markdown("---")
 
     # --- TABS SYSTEM ---
-    tab_examportal, tab_ps = st.tabs(["🎓 ExamPortal Manager", "🌐 Website Manager (PS)"])
+    tab_examportal, tab_ps, tab_bot = st.tabs(["🎓 ExamPortal Manager", "🌐 Website Manager (PS)", "🤖 Bot Manager"])
+
 
     # =======================================================
     # TAB 1: EXAM PORTAL MANAGER
@@ -527,6 +533,137 @@ def main():
                                     st.error("Push failed")
             else:
                 st.error(f"❌ Could not sync with PS. Check Token. ({ps_data.get('msg')})")
+
+    # =======================================================
+    # TAB 3: BOT MANAGER (CourseDataDB)
+    # =======================================================
+    with tab_bot:
+        st.markdown("### 🤖 Telegram Bot Database Manager")
+        bot_tab_batch, bot_tab_course = st.tabs(["📁 Batch Management", "📚 Course Management"])
+
+        # ---------------------------------------------------
+        # 1. BATCH MANAGEMENT WINDOW
+        # ---------------------------------------------------
+        with bot_tab_batch:
+            st.markdown("#### 📁 ব্যাচ কন্ট্রোল প্যানেল")
+            
+            # --- ADD NEW BATCH STATE ---
+            if 'show_add_batch' not in st.session_state:
+                st.session_state.show_add_batch = False
+
+            if not st.session_state.show_add_batch:
+                if st.button("➕ Add New Batch"):
+                    st.session_state.show_add_batch = True
+                    st.rerun()
+            
+            # --- ADD NEW BATCH FORM ---
+            if st.session_state.show_add_batch:
+                with st.container():
+                    st.markdown("<div class='css-card'>", unsafe_allow_html=True)
+                    st.markdown("#### ✨ Create New Batch")
+                    
+                    b_type = st.selectbox("Batch Type", ["HSC batch", "Admission batch"])
+                    b_name = st.text_input("Name:", placeholder="🔥HSC 2028 All Courses🔥")
+                    b_year = st.text_input("Year:", placeholder="28 (শুধু ২ ডিজিট দিন)", max_chars=2)
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    c1, c2 = st.columns(2)
+                    
+                    if c1.button("✅ Save", use_container_width=True):
+                        if not b_name or not b_year:
+                            st.warning("⚠️ Name এবং Year দেওয়া বাধ্যতামূলক!")
+                        else:
+                            prefix = "hsc" if b_type == "HSC batch" else "admission"
+                            filename = f"{prefix}{b_year}.json"
+                            
+                            # Check if file already exists
+                            check_res = fetch_data(REPO_2_OWNER, REPO_3_NAME, filename, TOKEN_PS)
+                            if check_res['status'] == 'success':
+                                st.error(f"❌ এই নামের ব্যাচ ({filename}) আগে থেকেই ডাটাবেসে আছে! দয়া করে অন্য ব্যাচ তৈরি করুন।")
+                            else:
+                                new_content = {
+                                    "name": b_name,
+                                    "type": "folder",
+                                    "children": {}
+                                }
+                                with st.spinner("ব্যাচ তৈরি করা হচ্ছে..."):
+                                    push_res = push_data(REPO_2_OWNER, REPO_3_NAME, filename, TOKEN_PS, new_content, f"Create new batch {filename}")
+                                    
+                                    if push_res and push_res.status_code in [200, 201]:
+                                        st.success(f"✅ {filename} সফলভাবে তৈরি হয়েছে!")
+                                        st.session_state.show_add_batch = False
+                                        time.sleep(1.5)
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ ফাইল তৈরি করতে সমস্যা হয়েছে!")
+                    
+                    if c2.button("🚫 Cancel", use_container_width=True):
+                        st.session_state.show_add_batch = False
+                        st.rerun()
+                    st.markdown("</div>", unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            # --- EXISTING BATCHES LIST & EDIT ---
+            st.markdown("#### 📦 Existing Batches")
+            with st.spinner("ডাটাবেস থেকে ব্যাচ লোড হচ্ছে..."):
+                root_res = requests.get(f"https://api.github.com/repos/{REPO_2_OWNER}/{REPO_3_NAME}/contents/", headers=get_headers(TOKEN_PS))
+                
+                if root_res.status_code == 200:
+                    json_files = [f for f in root_res.json() if f['name'].endswith('.json')]
+                    
+                    for f in json_files:
+                        file_res = fetch_data(REPO_2_OWNER, REPO_3_NAME, f['name'], TOKEN_PS)
+                        if file_res['status'] == 'success':
+                            content = file_res['content']
+                            sha = file_res['sha']
+                            batch_title = content.get('name', f['name'])
+                            
+                            with st.container():
+                                st.markdown("<div class='info-box'>", unsafe_allow_html=True)
+                                
+                                edit_key = f"edit_{f['name']}"
+                                if edit_key not in st.session_state:
+                                    st.session_state[edit_key] = False
+                                
+                                # DISPLAY MODE
+                                if not st.session_state[edit_key]:
+                                    col_title, col_btn = st.columns([4, 1])
+                                    col_title.markdown(f"**{batch_title}**  `({f['name']})`")
+                                    if col_btn.button("✏️ Edit", key=f"btn_{f['name']}"):
+                                        st.session_state[edit_key] = True
+                                        st.rerun()
+                                        
+                                # EDIT MODE
+                                else:
+                                    new_name = st.text_input(f"Edit Name for {f['name']}:", value=batch_title, key=f"inp_{f['name']}")
+                                    ec1, ec2 = st.columns(2)
+                                    
+                                    if ec1.button("✅ Save", key=f"save_{f['name']}"):
+                                        content['name'] = new_name
+                                        with st.spinner("আপডেট করা হচ্ছে..."):
+                                            push_res = push_data(REPO_2_OWNER, REPO_3_NAME, f['name'], TOKEN_PS, content, f"Update name for {f['name']}", sha)
+                                            if push_res and push_res.status_code in [200, 201]:
+                                                st.success("✅ নাম সফলভাবে সেভ হয়েছে!")
+                                                st.session_state[edit_key] = False
+                                                time.sleep(1)
+                                                st.rerun()
+                                            else:
+                                                st.error("❌ আপডেট ফেইল হয়েছে!")
+                                    
+                                    if ec2.button("🚫 Cancel", key=f"cancel_{f['name']}"):
+                                        st.session_state[edit_key] = False
+                                        st.rerun()
+                                        
+                                st.markdown("</div>", unsafe_allow_html=True)
+                else:
+                    st.error("GitHub থেকে ফাইল ফেচ করা সম্ভব হয়নি। টোকেন চেক করুন।")
+
+        # ---------------------------------------------------
+        # 2. COURSE MANAGEMENT WINDOW (Placeholder)
+        # ---------------------------------------------------
+        with bot_tab_course:
+            st.info("🚧 Course Management উইন্ডোটি স্ট্রাকচার হিসেবে তৈরি করা হয়েছে। এর ডিজাইন এবং ডাইনামিক লজিক আমরা পরবর্তীতে যুক্ত করব।")
 
 if __name__ == "__main__":
     main()
