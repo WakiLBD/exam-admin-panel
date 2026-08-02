@@ -662,8 +662,187 @@ def main():
         # ---------------------------------------------------
         # 2. COURSE MANAGEMENT WINDOW (Placeholder)
         # ---------------------------------------------------
+                # ---------------------------------------------------
+        # 2. COURSE MANAGEMENT WINDOW (Dynamic Infinite Tree)
+        # ---------------------------------------------------
         with bot_tab_course:
-            st.info("🚧 Course Management উইন্ডোটি স্ট্রাকচার হিসেবে তৈরি করা হয়েছে। এর ডিজাইন এবং ডাইনামিক লজিক আমরা পরবর্তীতে যুক্ত করব।")
+            # Helper function to get the current node based on navigation path
+            def get_current_node():
+                if not st.session_state.bot_nav_path:
+                    return None
+                node = st.session_state.bot_current_file_content
+                for key in st.session_state.bot_nav_path[1:]:
+                    node = node['children'][key]
+                return node
+
+            # Init State Variables
+            if 'bot_nav_path' not in st.session_state:
+                st.session_state.bot_nav_path = []
+            if 'bot_edit_course' not in st.session_state:
+                st.session_state.bot_edit_course = None
+            if 'bot_add_course' not in st.session_state:
+                st.session_state.bot_add_course = False
+
+            path = st.session_state.bot_nav_path
+
+            # --- TOP NAVIGATION BAR (BACK BUTTON) ---
+            if len(path) > 0:
+                if st.button("⬅️ ফিরে যান (Back)", use_container_width=False, type="secondary"):
+                    st.session_state.bot_nav_path.pop()
+                    st.session_state.bot_edit_course = None
+                    st.session_state.bot_add_course = False
+                    st.rerun()
+                st.markdown("---")
+
+            # --- LEVEL 0: ROOT FOLDERS (JSON FILES) ---
+            if len(path) == 0:
+                st.markdown("#### 🌐 রুট ফোল্ডার সিলেক্ট করুন")
+                with st.spinner("ডাটাবেস লোড হচ্ছে..."):
+                    root_res = requests.get(f"https://api.github.com/repos/{REPO_2_OWNER}/{REPO_3_NAME}/contents/", headers=get_headers(TOKEN_PS))
+                    if root_res.status_code == 200:
+                        files = [f for f in root_res.json() if f['name'].endswith('.json')]
+                        for f in files:
+                            file_res = fetch_data(REPO_2_OWNER, REPO_3_NAME, f['name'], TOKEN_PS)
+                            if file_res['status'] == 'success':
+                                c_name = file_res['content'].get('name', f['name'])
+                                if st.button(f"📁 {c_name}", key=f"nav_root_{f['name']}"):
+                                    st.session_state.bot_nav_path.append(f['name'])
+                                    st.session_state.bot_current_file_content = file_res['content']
+                                    st.session_state.bot_current_file_sha = file_res['sha']
+                                    st.session_state.bot_current_filename = f['name']
+                                    st.rerun()
+                    else:
+                        st.error("Failed to load root folders.")
+            
+            # --- LEVEL > 0: INSIDE A FOLDER ---
+            else:
+                current_node = get_current_node()
+                st.markdown(f"#### 📂 {current_node.get('name', 'Folder')}")
+
+                children = current_node.get('children', {})
+                # Check if this folder contains any other sub-folders
+                has_folders = any(child.get('type') == 'folder' for child in children.values())
+                
+                # 1. SHOW EXISTING CHILDREN (Folders and Courses)
+                for child_key, child in children.items():
+                    if child.get('type') == 'folder':
+                        # Folder Button
+                        if st.button(f"📁 {child.get('name', child_key)}", key=f"nav_{child_key}"):
+                            st.session_state.bot_nav_path.append(child_key)
+                            st.session_state.bot_edit_course = None
+                            st.session_state.bot_add_course = False
+                            st.rerun()
+                    
+                    elif child.get('type') == 'course':
+                        # Course Display with Edit Button
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        col1, col2 = st.columns([4, 1])
+                        col1.markdown(f"**📚 {child.get('name', child_key)}**")
+                        if col2.button("✏️ Edit", key=f"edit_btn_{child_key}"):
+                            st.session_state.bot_edit_course = child_key
+                            st.session_state.bot_add_course = False
+                            st.rerun()
+                        
+                        # --- EDIT MODE FORM (Inline Container) ---
+                        if st.session_state.bot_edit_course == child_key:
+                            with st.container():
+                                st.markdown("<div class='css-card'>", unsafe_allow_html=True)
+                                st.markdown(f"##### ✏️ Editing: {child.get('name')}")
+                                
+                                # Notice the .strip() at the end to auto-remove spaces!
+                                e_name = st.text_input("Course Name", value=child.get('name', '') or '').strip()
+                                e_price = st.number_input("Price (TK)", value=int(child.get('price', 0)))
+                                e_group = st.text_input("Group Link", value=child.get('groupLink', '') or '').strip()
+                                e_payment = st.text_input("Payment Link", value=child.get('paymentLink', '') or '').strip()
+                                e_image = st.text_input("Image Link", value=child.get('imageLink', '') or '').strip()
+                                e_desc = st.text_area("Description", value=child.get('description', '') or '', height=150).strip()
+                                
+                                ec1, ec2 = st.columns(2)
+                                if ec1.button("✅ Save Changes", key=f"save_{child_key}"):
+                                    # Update Local JSON Memory
+                                    current_node['children'][child_key].update({
+                                        "name": e_name,
+                                        "price": e_price,
+                                        "groupLink": e_group,
+                                        "paymentLink": e_payment,
+                                        "imageLink": e_image,
+                                        "description": e_desc
+                                    })
+                                    # Push to GitHub
+                                    with st.spinner("Saving to database..."):
+                                        push_res = push_data(REPO_2_OWNER, REPO_3_NAME, st.session_state.bot_current_filename, TOKEN_PS, st.session_state.bot_current_file_content, f"Update course {child_key}", st.session_state.bot_current_file_sha)
+                                        if push_res and push_res.status_code in [200, 201]:
+                                            st.success("✅ Saved perfectly!")
+                                            st.session_state.bot_current_file_sha = push_res.json()['content']['sha']
+                                            st.session_state.bot_edit_course = None
+                                            time.sleep(1)
+                                            st.rerun()
+                                        else:
+                                            st.error("❌ Failed to save.")
+                                            
+                                if ec2.button("🚫 Cancel", key=f"cancel_{child_key}"):
+                                    st.session_state.bot_edit_course = None
+                                    st.rerun()
+                                st.markdown("</div>", unsafe_allow_html=True)
+                                st.markdown("<br>", unsafe_allow_html=True)
+
+                st.markdown("---")
+                
+                # 2. ADD NEW COURSE SECTION (Only at the deepest folder level)
+                if not has_folders:
+                    if not st.session_state.bot_add_course:
+                        if st.button("➕ Add New Course Here"):
+                            st.session_state.bot_add_course = True
+                            st.session_state.bot_edit_course = None
+                            st.rerun()
+                    
+                    if st.session_state.bot_add_course:
+                        with st.container():
+                            st.markdown("<div class='css-card'>", unsafe_allow_html=True)
+                            st.markdown("##### ✨ Create New Course")
+                            
+                            n_key = st.text_input("Course ID/Key (e.g. acs28_phy_c1 - must be unique without space)", placeholder="Course ID").strip()
+                            n_name = st.text_input("Course Name").strip()
+                            n_price = st.number_input("Price (TK)", value=100)
+                            n_group = st.text_input("Group Link").strip()
+                            n_payment = st.text_input("Payment Link").strip()
+                            n_image = st.text_input("Image Link").strip()
+                            n_desc = st.text_area("Description", height=150).strip()
+                            
+                            nc1, nc2 = st.columns(2)
+                            if nc1.button("✅ Add Course", key="save_new"):
+                                if not n_key or not n_name:
+                                    st.warning("⚠️ ID and Name are required!")
+                                elif " " in n_key:
+                                    st.error("❌ ID cannot contain spaces!")
+                                elif n_key in children:
+                                    st.error("❌ This ID already exists!")
+                                else:
+                                    current_node['children'][n_key] = {
+                                        "name": n_name,
+                                        "type": "course",
+                                        "price": n_price,
+                                        "groupLink": n_group,
+                                        "paymentLink": n_payment,
+                                        "imageLink": n_image,
+                                        "description": n_desc
+                                    }
+                                    with st.spinner("Adding new course..."):
+                                        push_res = push_data(REPO_2_OWNER, REPO_3_NAME, st.session_state.bot_current_filename, TOKEN_PS, st.session_state.bot_current_file_content, f"Add course {n_key}", st.session_state.bot_current_file_sha)
+                                        if push_res and push_res.status_code in [200, 201]:
+                                            st.success("✅ Added successfully!")
+                                            st.session_state.bot_current_file_sha = push_res.json()['content']['sha']
+                                            st.session_state.bot_add_course = False
+                                            time.sleep(1)
+                                            st.rerun()
+                                        else:
+                                            st.error("❌ Failed to add course.")
+                                            
+                            if nc2.button("🚫 Cancel", key="cancel_new"):
+                                st.session_state.bot_add_course = False
+                                st.rerun()
+                            st.markdown("</div>", unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     main()
